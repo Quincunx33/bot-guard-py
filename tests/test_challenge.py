@@ -33,8 +33,10 @@ class ChallengeTests(unittest.TestCase):
         self.assertEqual(difficulty, 1)
         solution = next(str(i) for i in range(100)
                         if hashlib.sha256((token + str(i)).encode()).hexdigest().startswith("0"))
+        invalid_solution = next(str(i) for i in range(100)
+                                if not hashlib.sha256((token + str(i)).encode()).hexdigest().startswith("0"))
         self.assertFalse(manager.verify_browser_probe(token, solution, "other-ip"))
-        self.assertFalse(manager.verify_browser_probe(token, "wrong", "peer-ip"))
+        self.assertFalse(manager.verify_browser_probe(token, invalid_solution, "peer-ip"))
         self.assertTrue(manager.verify_browser_probe(token, solution, "peer-ip"))
         self.assertFalse(manager.verify_browser_probe(token, solution, "peer-ip"))
 
