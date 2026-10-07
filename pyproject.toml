@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bot-guard-py"
+version = "0.7.0"
+description = "Dependency-free HTTP bot detection and application-layer flood mitigation for Python 3.9+"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [{ name = "bot-guard-py contributors" }]
+keywords = ["bot-detection", "ddos-mitigation", "rate-limiting", "security", "http", "scraper", "headless"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+]
+
+[project.optional-dependencies]
+fastapi = ["fastapi>=0.80"]
+flask = ["flask>=2.0"]
+django = ["django>=3.2"]
+test = ["pytest>=7", "mypy>=1.8"]
+
+[project.scripts]
+bot-guard = "bot_guard.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["bot_guard*"]
+
+[tool.setuptools.package-data]
+bot_guard = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
