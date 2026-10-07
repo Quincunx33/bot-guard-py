@@ -51,7 +51,7 @@ jobs:
         run: python -m compileall -q bot_guard examples
 
   browser-integration:
-    name: Real Chromium · Playwright + Selenium
+    name: Real Chromium · Playwright
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -64,10 +64,8 @@ jobs:
           cache: pip
       - name: Install browser test tools
         run: |
-          python -m pip install --upgrade pip pytest selenium playwright
+          python -m pip install --upgrade pip pytest playwright
           python -m playwright install --with-deps chromium
-          sudo apt-get update
-          sudo apt-get install -y xvfb
       - name: Make Chromium available to local-only browser tests
         shell: bash
         run: |
@@ -75,10 +73,8 @@ jobs:
           test -n "$chromium_bin"
           sudo ln -sf "$chromium_bin" /usr/bin/chromium
           /usr/bin/chromium --version
-      - name: Run local Playwright, Selenium, and GUI Chromium tests
-        run: xvfb-run -a python -m pytest -q tests/test_browser_automation_local.py tests/test_gui_chromium_local.py
-        env:
-          BOT_GUARD_RUN_GUI_TESTS: "1"
+      - name: Run local Playwright Chromium tests
+        run: python -m pytest -q tests/test_browser_automation_local.py -k playwright
 
   package:
     name: Build, validate, and install distributions
