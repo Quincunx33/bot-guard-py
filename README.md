@@ -202,4 +202,4 @@ Use TestPyPI first if you want to rehearse the upload. Published files for a rel
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE)..
