@@ -1,205 +1,287 @@
-# bot-guard-py
+<div align="center">
 
-[![PyPI version](https://img.shields.io/pypi/v/bot-guard-py)](https://pypi.org/project/bot-guard-py/)
-[![Python versions](https://img.shields.io/pypi/pyversions/bot-guard-py)](https://pypi.org/project/bot-guard-py/)
-[![License](https://img.shields.io/pypi/l/bot-guard-py)](LICENSE)
+# 🛡️ BOT GUARD
 
-**Lightweight bot detection and application-layer HTTP flood controls for Python.**
+### A smarter first line of defense for your Python web app
 
-`bot-guard-py` adds configurable bot scoring, optional JavaScript browser signals, per-client/global rate limits, and concurrency shedding. It has **zero mandatory runtime dependencies** and works with ASGI and WSGI applications.
+**Spot suspicious requests. Slow down HTTP floods. Stay in control.**
 
-> **Scope:** This can reject HTTP requests after they reach your application. It does not stop volumetric/network DDoS or replace a CDN, WAF, hosting-provider protection, or origin firewall.
+<p>
+  <a href="https://pypi.org/project/bot-guard-py/"><img src="https://img.shields.io/pypi/v/bot-guard-py?style=for-the-badge&color=7C3AED&label=PyPI" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/bot-guard-py/"><img src="https://img.shields.io/pypi/pyversions/bot-guard-py?style=for-the-badge&color=2563EB" alt="Supported Python versions"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-16A34A?style=for-the-badge" alt="MIT License"></a>
+</p>
 
-## Install
+<p>
+  <a href="https://github.com/Quincunx33/bot-guard-py/actions/workflows/ci.yml"><img src="https://github.com/Quincunx33/bot-guard-py/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <img src="https://img.shields.io/badge/Core-No%20Dependencies-0F766E?style=flat-square" alt="No required runtime dependencies">
+  <img src="https://img.shields.io/badge/ASGI%20%26%20WSGI-Supported-475569?style=flat-square" alt="ASGI and WSGI">
+</p>
+
+**[Get Started](#-get-started-in-30-seconds)** · **[Features](#-what-can-bot-guard-do)** · **[Examples](#-more-examples)** · **[Advanced Guide](docs/ADVANCED.md)** · **[Security](SECURITY.md)**
+
+</div>
+
+---
+
+## 👋 Meet Bot Guard
+
+Running a website or API? Not every visitor is a real person. Some requests come from scripts, scrapers, or automated clients; others arrive so quickly they overwhelm your app.
+
+**Bot Guard** is a lightweight Python toolkit that helps your application **inspect requests, assign a risk score, and decide what to do next**.
+
+You don't need to understand TLS, networking, or security engineering to try it. Start by *watching* traffic. Turn on blocking only when your rules make sense for your users.
+
+> 🧭 **What it protects:** application-level HTTP traffic. Bot Guard does **not** replace a CDN, WAF, origin firewall, or network-level DDoS protection.
+
+## ⚡ Get started in 30 seconds
+
+**Requirements:** Python 3.9 or newer.
+
+### 1. Install
 
 ```bash
 python -m pip install bot-guard-py
 ```
 
-Optional framework extras are available:
+### 2. Try your first check
 
-```bash
-python -m pip install 'bot-guard-py[fastapi]'
-python -m pip install 'bot-guard-py[flask]'
-python -m pip install 'bot-guard-py[django]'
+Save this as `demo.py`:
+
+```python
+from bot_guard import BotGuard
+
+# Safe starting mode: observe decisions without blocking requests.
+guard = BotGuard(mode="shadow")
+
+headers = {"User-Agent": "curl/8.0"}
+result = guard.inspect(headers, client_ip="127.0.0.1")
+
+print("Action:", result.action)
+print("Risk score:", result.score)
+print(result.explain())
 ```
 
-The current release is `0.7.0`. Confirm the install with:
+Run it:
 
 ```bash
-python -c "import bot_guard; print(bot_guard.__version__)"
+python demo.py
 ```
 
-## What it provides
+**That's it!** You've run your first bot inspection. Change the sample headers to explore how the scoring works.
 
-| Feature | Purpose |
-|---|---|
-| Heuristic bot scoring | Identify common CLI clients, headless browsers, scrapers, and inconsistent browser headers |
-| Browser-side probe | Optional signed JavaScript proof-of-work plus WebDriver/automation signals |
-| Progressive policy | Allow, monitor, challenge, rate-limit, or block based on score and thresholds |
-| Verified crawler handling | Match search-crawler User-Agent markers **and** current vendor IP ranges |
-| HTTP flood controls | Bounded per-client/global token buckets and an in-flight request cap |
-| Framework adapters | Generic ASGI/WSGI and FastAPI, Flask, and Django integrations |
+**New here?** Keep `mode="shadow"` at first. This reports suspicious traffic without rejecting visitors.
 
-## Quick start
+## ✨ What can Bot Guard do?
 
-Use the core directly when you want to apply the decision in your own request handler:
+| | Feature | In simple words |
+|:--:|---|---|
+| 🕵️ | **Bot detection** | Checks request headers for common automation and scraper signals |
+| 📊 | **Explainable scores** | Shows a score, action, reasons, and matched rules |
+| 🚦 | **Flexible decisions** | Allow, monitor, challenge, rate-limit, or block |
+| ⏱️ | **Rate limiting** | Helps prevent clients from sending too many HTTP requests |
+| 🧱 | **Concurrency protection** | Caps how many requests your app handles at once |
+| 🧩 | **Framework adapters** | Works with FastAPI, Starlette, Flask, Django, and ASGI/WSGI |
+| 🌐 | **Optional browser probe** | Can collect limited JavaScript automation signals on your own pages |
+| 🔎 | **Crawler verification** | Supports verified search crawlers using official IP data |
+
+*Signals are heuristics, not proof of identity. Check real traffic before enforcing aggressive rules.*
+
+## 🧰 Plug it into your app
+
+Using **FastAPI**? Add Bot Guard middleware to your existing application:
+
+```bash
+python -m pip install "bot-guard-py[fastapi]"
+```
+
+```python
+from fastapi import FastAPI
+from bot_guard import BotGuard
+from bot_guard.middleware.fastapi import BotGuardMiddleware
+
+app = FastAPI()
+app.add_middleware(BotGuardMiddleware, guard=BotGuard(mode="shadow"))
+
+@app.get("/")
+def home():
+    return {"message": "Hello from a Bot Guard-enabled app!"}
+```
+
+This begins in **monitor-only** mode. When you're ready to enforce policies, review the [Advanced Guide](docs/ADVANCED.md) for thresholds, challenge handling, limiter setup, and middleware ordering.
+
+**Flask or Django?** Install `bot-guard-py[flask]` or `bot-guard-py[django]`, then follow the framework examples in the advanced guide.
+
+## 🧪 More examples
+
+<details>
+<summary><b>🎲 Check any HTTP headers</b></summary>
+
+<br>
 
 ```python
 from bot_guard import BotGuard
 
 guard = BotGuard(threshold=0.6)
-result = guard.inspect(request.headers, client_ip=client_ip)
 
-if result.action == "BLOCK":
-    return Response("Forbidden", status=403)
+result = guard.inspect({
+    "User-Agent": "curl/8.0",
+    "Accept": "*/*",
+}, client_ip="127.0.0.1")
+
+print(result.action)        # Suggested action
+print(result.matched_rules) # Rules that matched
+print(result.explain())     # Human-readable explanation
 ```
 
-For gradual rollout, start in monitor-only mode:
+To actually reject a request, your application must apply the chosen policy (or use an appropriate middleware adapter).
 
-```python
-guard = BotGuard(mode="shadow")  # reports decisions; does not block
+</details>
+
+<details>
+<summary><b>🖥️ Try the command-line tool</b></summary>
+
+<br>
+
+Inspect a tiny JSON request example without writing a Python script:
+
+```bash
+echo '{"User-Agent":"curl/8.0"}' | bot-guard explain -
 ```
 
-Use `result.explain()` for a readable explanation and `result.matched_rules` for stable rule IDs. Tune thresholds and weights for your own traffic; do not permanently ban someone based on one heuristic result.
+The CLI prints the decision and its reasons.
 
-## FastAPI / Starlette
+</details>
 
-The middleware order below makes BotGuard the outer policy layer, then rate/concurrency protection, then the browser-signal endpoints and your application:
+<details>
+<summary><b>⏳ Add application-level rate limits</b></summary>
+
+<br>
 
 ```python
-import os
-from fastapi import FastAPI
-from bot_guard import (
-    BotGuard, BrowserSignalManager, ChallengeManager, DDoSProtector,
-)
-from bot_guard.middleware.fastapi import (
-    BotGuardMiddleware, BrowserSignalMiddleware, DDoSProtectionMiddleware,
-)
+from bot_guard import DDoSProtector
+from bot_guard.middleware.fastapi import DDoSProtectionMiddleware
 
-app = FastAPI()
-
-# Keep this secret stable across restarts and private; use your deployment's
-# secret manager/environment variables, never commit it to Git.
-challenge = ChallengeManager(
-    os.environ["BOT_GUARD_SECRET"], challenge_ttl=60, attestation_ttl=300,
-)
-signals = BrowserSignalManager(challenge)
-guard = BotGuard(browser_signal_provider=signals)
 protector = DDoSProtector(
-    per_client_rate=20, per_client_burst=60,
-    global_rate=1000, global_burst=2000,
+    per_client_rate=20,
+    per_client_burst=60,
+    global_rate=1000,
+    global_burst=2000,
     max_concurrent=500,
 )
 
-# Add inner-to-outer; the last added middleware runs first.
-app.add_middleware(BrowserSignalMiddleware, signal_manager=signals)
+# Add to an existing FastAPI app.
 app.add_middleware(DDoSProtectionMiddleware, protector=protector)
-app.add_middleware(BotGuardMiddleware, guard=guard)
 ```
 
-If you already have a FastAPI app, keep your existing routes and add the setup around it. BotGuard's default block response is `403`; rate limiting is `429`, and concurrency shedding is `503`.
+These are example settings, **not universal safe limits**. Tune them to your app's capacity and real usage.
 
-## Optional JavaScript browser probe
+</details>
 
-The probe is **opt-in**. Add it to the shared HTML template for pages where you want browser-side signals:
+<details>
+<summary><b>🧠 Explore browser signals and verified crawlers</b></summary>
 
-```html
-<script src="/__bot_guard/probe.js" defer></script>
+<br>
+
+Bot Guard also includes an **optional same-origin JavaScript probe** and utilities to verify known search-engine crawler IP ranges. Neither is needed for the basic detector.
+
+For working configurations, lifecycle notes, and security limitations, read the [Advanced Guide](docs/ADVANCED.md).
+
+</details>
+
+## 🗺️ How it works
+
+```text
+Incoming HTTP request
+         |
+         v
+  Inspect request signals
+         |
+         v
+  Calculate a risk score
+         |
+         v
+  Choose a policy action
+         |
+         +---- ALLOW / MONITOR
+         +---- CHALLENGE
+         +---- RATE_LIMIT
+         +---- BLOCK
 ```
 
-The same-origin script solves a short SHA-256 nonce challenge and reports `navigator.webdriver`, a small set of automation globals, and an interaction count. The server validates the one-use proof and sets a signed, short-lived `HttpOnly; SameSite=Lax` cookie. A positive WebDriver signal adds risk and, with the default thresholds, is blocked on a later request.
+**Start by monitoring; enforce gradually.** False positives are possible, especially when visitors share IP addresses or have unusual browsers.
 
-A normal browser with JavaScript enabled is not blocked merely for having no interactions. Missing JavaScript is neutral. This is a heuristic—not a CAPTCHA or hardware-backed proof—and stealth automation can hide client-side signals. The first page request can finish before the probe reports, so protect sensitive actions with authentication, authorization, CSRF controls, and rate limits as appropriate.
+## ❓ Frequently asked questions
 
-For WSGI, wrap the app with `BrowserSignalWSGI` from `bot_guard.middleware.browser_signals` (or `bot_guard.middleware.BrowserSignalWSGI`) in the same order as the ASGI example.
+<details>
+<summary><b>Do I need to know cybersecurity?</b></summary>
 
-## Protecting Flask / other WSGI apps
+No. The quick-start example uses only Python basics. Advanced networking and framework configuration can come later.
 
-The generic WSGI adapters work with Flask or another WSGI application:
+</details>
 
-```python
-from bot_guard import BotGuard, DDoSProtector
-from bot_guard.middleware import BotGuardWSGI, DDoSProtectionWSGI, BrowserSignalWSGI
+<details>
+<summary><b>Does Bot Guard stop every bot or DDoS attack?</b></summary>
 
-# `app` is your existing WSGI callable; set `signals` as shown above if using
-# the optional JavaScript probe.
-protector = DDoSProtector(per_client_rate=20, per_client_burst=60)
-app = BotGuardWSGI(
-    DDoSProtectionWSGI(BrowserSignalWSGI(app, signals), protector),
-    BotGuard(browser_signal_provider=signals),
-)
-```
+No. Its signals are imperfect and it only handles requests **after they reach your application**. Keep upstream CDN, WAF, hosting, and firewall protections enabled.
 
-If you do not want the JavaScript probe, omit `BrowserSignalWSGI` and do not set `browser_signal_provider`. Flask also offers `init_bot_guard(app, guard)` and `init_ddos_protection(app, protector)` in `bot_guard.middleware.flask`; Django adapters are in `bot_guard.middleware.django`.
+</details>
 
-## Search-engine crawlers
+<details>
+<summary><b>Will it block real visitors?</b></summary>
 
-Never exempt a crawler from its User-Agent text alone; it can be spoofed. Use current official IP feeds and give the same verifier to `BotGuard` and `DDoSProtector`:
+It can if your thresholds are too strict. Start with shadow mode, review decisions, and tune policies on representative traffic before enabling blocking.
+
+</details>
+
+<details>
+<summary><b>Does it require JavaScript or a database?</b></summary>
+
+The core detector has no mandatory runtime dependencies and does not require JavaScript. The browser probe is optional. Built-in counters and limiters are process-local; distributed deployments may need shared storage or gateway limits.
+
+</details>
+
+<details>
+<summary><b>Can I use it with Flask or Django?</b></summary>
+
+Yes. Optional adapters support Flask, Django, and generic ASGI/WSGI applications. See the advanced guide for recommended setup.
+
+</details>
+
+## 📚 Documentation
+
+| Guide | What you'll find |
+|---|---|
+| **[Advanced Technical Guide](docs/ADVANCED.md)** | Framework setup, challenges, rate limiting, crawler feeds, security notes, and detailed examples |
+| **[Security Policy](SECURITY.md)** | Security guidance and reporting |
+| **[Changelog](CHANGELOG.md)** | Release history |
+| **[License](LICENSE)** | MIT License |
+
+## 🤝 Development & contributing
+
+Want to improve Bot Guard? Issues and thoughtful pull requests are welcome.
+
+Run the repository's tests locally:
 
 ```bash
-python examples/update_crawler_feeds.py --directory ./crawler-feeds
-```
-
-This downloads and validates Google, Bing, DuckDuckBot, and DuckAssistBot ranges outside the request path. It writes `googlebot.json`, `bingbot.json`, `duckduckbot.json`, and `duckassistbot.json` only after validation. Load them at startup:
-
-```python
-import json
-from pathlib import Path
-from bot_guard import BotGuard, DDoSProtector, VerifiedCrawlerAllowlist
-
-folder = Path("crawler-feeds")
-read_feed = lambda name: json.loads((folder / name).read_text(encoding="utf-8"))
-verified_crawlers = VerifiedCrawlerAllowlist.from_json_feeds({
-    "googlebot": read_feed("googlebot.json"),
-    "bingbot": read_feed("bingbot.json"),
-    "duckduckbot": read_feed("duckduckbot.json"),
-    "duckassistbot": read_feed("duckassistbot.json"),
-})
-
-guard = BotGuard(
-    browser_signal_provider=signals,  # omit if not using the JS probe
-    trusted_crawler_verifier=verified_crawlers,
-)
-protector = DDoSProtector(trusted_crawler_verifier=verified_crawlers)
-```
-
-Use these `guard` and `protector` objects in the framework setup above. A verified crawler skips heuristic bot blocking and the per-client rate bucket; it still consumes the global budget and concurrency capacity. Refresh the feeds periodically according to vendor guidance: [Google](https://developers.google.com/crawling/docs/crawlers-fetchers/verify-google-requests), [Bing](https://www.bing.com/webmasters/help/how-to-verify-bingbot-3905dc26), [DuckDuckBot](https://duckduckgo.com/duckduckbot.json), and [DuckAssistBot](https://duckduckgo.com/duckassistbot.json).
-
-## Limits and deployment notes
-
-- `DDoSProtector` starts at 20 requests/second per client (burst 60), 1,000/second globally (burst 2,000), and 500 concurrent application requests. **Tune these to measured capacity**; NAT users can share a client bucket.
-- Built-in counters, token buckets, and challenge replay protection are process-local. Multi-worker or multi-host deployments need shared limiter/replay storage or enforcement at a gateway/CDN.
-- Behind a reverse proxy, configure trusted-proxy handling before using IP-based rules. The default adapters use the socket peer and do not trust arbitrary `X-Forwarded-For` headers. The probe and BotGuard must resolve the same client IP.
-- Keep CDN/WAF, hosting-provider DDoS controls, origin firewalling, and upstream limits enabled. This library only sheds application-layer HTTP load.
-
-## Tests and local development
-
-```bash
-python -m pip install -e '.[test]'
+git clone https://github.com/Quincunx33/bot-guard-py.git
+cd bot-guard-py
+python -m pip install -e ".[test]"
 python -m pytest -q
-python -m compileall -q bot_guard examples
 ```
 
-The suite includes unit tests, local HTTP flood tests, and optional Chromium/Selenium browser tests. Run the full GUI-mode test under Xvfb when Chromium, Selenium, and Xvfb are installed:
+This project provides **application-layer protection and diagnostics**, not a guarantee that all malicious traffic will be detected or blocked. For production, configure trusted proxy handling, monitor false positives, and use upstream protections.
 
-```bash
-BOT_GUARD_RUN_GUI_TESTS=1 xvfb-run -a python -m pytest -q
-```
+---
 
-## Build and publish
+<div align="center">
 
-From the repository root, with a new version set in `pyproject.toml`:
+### 🛡️ Protect thoughtfully. Start simply. Scale confidently.
 
-```bash
-python -m pip install --upgrade build twine
-python -m build
-python -m twine check dist/*
-python -m twine upload dist/*
-```
+**Bot Guard · Python 3.9+ · MIT License**
 
-Use TestPyPI first if you want to rehearse the upload. Published files for a release version cannot be replaced; bump the version before publishing changes. Prefer a project-scoped PyPI token or Trusted Publishing, and never commit tokens or `.pypirc` files.
+[PyPI](https://pypi.org/project/bot-guard-py/) · [Advanced Docs](docs/ADVANCED.md) · [Report a Security Issue](SECURITY.md)
 
-## License
+<sub>Made for developers who want visibility and control without unnecessary complexity.</sub>
 
-MIT. See [LICENSE](LICENSE)..
+</div>
